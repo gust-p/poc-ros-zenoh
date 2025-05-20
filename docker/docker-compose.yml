@@ -1,0 +1,49 @@
+name: poc-ros-zenoh
+
+services:
+  ros-noetic-router:
+    profiles:
+      - run
+    image: osrf/ros:noetic-desktop-full
+    networks:
+      - robot-net
+    volumes:
+      - ../.:/app:rw
+      - .././target/release/router:/usr/bin/router:rw
+
+  ros-noetic-subscriber:
+    profiles:
+      - run
+    image: osrf/ros:noetic-desktop-full
+    networks:
+      - robot-net
+    volumes:
+      - ../.:/app:rw
+      - .././target/release/router:/usr/bin/subscriber:rw
+
+  build:
+    profiles:
+      - build-ros
+    build:
+      context: .
+      dockerfile: builder-ros.Dockerfile
+    volumes:
+      - ../.:/app:rw
+    entrypoint: /app/docker/entrypoint-dev.sh
+    working_dir: /app
+    command: "cargo build --release"
+  
+  dev:
+    profiles:
+      - build-ros
+    build:
+      context: .
+      dockerfile: builder-ros.Dockerfile
+    volumes:
+      - ../.:/app:rw
+    entrypoint: /app/docker/entrypoint-dev.sh
+    working_dir: /app
+    command: "cargo watch -x check -x clippy"
+
+networks:
+  robot-net:
