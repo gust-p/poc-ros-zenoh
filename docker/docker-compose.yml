@@ -1,7 +1,7 @@
 name: poc-ros-zenoh
 
 services:
-  ros-noetic-router:
+  zenoh-router:
     profiles:
       - run
     image: osrf/ros:noetic-desktop-full

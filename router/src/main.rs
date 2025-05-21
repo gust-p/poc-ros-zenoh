@@ -24,13 +24,14 @@ impl echo_service::Server for EchoServiceImpl {
 
         let message = pry!(data.get_msg());
 
-        println!("Recv echo from client");
+        println!("Recv echo msg from client");
 
         let session = self.zenoh_session.clone();
         let message_string = message.to_string().unwrap();
+        println!("Echoing message to zenoh: {}", &message_string);
 
         tokio::spawn(async move {
-            match session.put("/echo", message_string).await {
+            match session.put("do/echo", message_string).await {
                 Ok(_) => println!("Echo sent to zenoh on /echo topic"),
                 Err(e) => {
                     eprintln!("Failed to publish echo to zenoh: {}", e)
@@ -52,11 +53,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::task::LocalSet::new()
         .run_until(async move {
             let listener = tokio::net::TcpListener::bind(&addr).await?;
+            println!("Listening on {}", &addr);
             let echo_client: schema_capnp::echo_service::Client =
                 capnp_rpc::new_client(EchoServiceImpl {
                     zenoh_session: session.clone(),
                 });
-
+            println!("Cap n' Proto client created");
             loop {
                 let (stream, _) = listener.accept().await?;
                 stream.set_nodelay(true)?;
@@ -72,7 +74,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let rpc_system =
                     RpcSystem::new(Box::new(network), Some(echo_client.clone().client));
 
+                println!("RPC System created");
                 tokio::task::spawn_local(rpc_system);
+                println!("RPC System spawned");
             }
         })
         .await
