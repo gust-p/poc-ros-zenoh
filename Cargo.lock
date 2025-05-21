@@ -1933,6 +1933,7 @@ dependencies = [
  "capnp-rpc",
  "capnpc",
  "futures",
+ "serde_json",
  "tokio",
  "tokio-util",
  "zenoh",

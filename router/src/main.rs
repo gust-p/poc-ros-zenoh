@@ -2,6 +2,7 @@ use capnp::capability::Promise;
 use capnp_rpc::pry;
 use capnp_rpc::{RpcSystem, rpc_twoparty_capnp, twoparty};
 use futures::AsyncReadExt;
+use serde_json::json;
 use zenoh::Config as ZenohConfig;
 
 pub mod schema_capnp {
@@ -45,7 +46,10 @@ impl echo_service::Server for EchoServiceImpl {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let config = ZenohConfig::default();
+    let mut config = ZenohConfig::default();
+    config
+        .insert_json5("mode", &json!("router").to_string())
+        .unwrap();
     let session = zenoh::open(config).await.unwrap();
 
     let addr = "127.0.0.1:7000";
