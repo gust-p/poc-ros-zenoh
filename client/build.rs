@@ -1,4 +1,3 @@
-
 fn main() {
     capnpc::CompilerCommand::new()
         .file("../proto/schema.capnp")

@@ -6,5 +6,5 @@ def listener(sample):
 
 if __name__ == "__main__":
     with zenoh.open(zenoh.Config()) as session:
-        sub = session.declare_subscriber('do/echo', listener)
+        sub = session.declare_subscriber('router/hello', listener)
         time.sleep(60)
