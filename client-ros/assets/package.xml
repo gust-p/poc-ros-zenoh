@@ -1,0 +1,9 @@
+<package format="2">
+  <name>test_msg</name>
+  <version>1.2.4</version>
+  <description>
+    asd.
+  </description>
+  <maintainer email="carter@notreal.email">Carter</maintainer>
+  <license>BSD</license>
+</package>

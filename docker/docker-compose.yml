@@ -1,25 +1,69 @@
 name: poc-ros-zenoh
 
+x-environment: &environment
+    environment:
+      RUST_LOG: ${RUST_LOG}
+
 services:
   zenoh-router:
+    <<: *environment
     profiles:
       - run
-    image: osrf/ros:noetic-desktop-full
+    image: ubuntu:24.04
+    entrypoint: >
+      /bin/bash -c "
+      /usr/bin/router
+      "
     networks:
       - robot-net
+    expose:
+      - 7000
     volumes:
-      - ../.:/app:rw
       - .././target/release/router:/usr/bin/router:rw
 
   ros-noetic-subscriber:
+    <<: *environment
     profiles:
       - run
-    image: osrf/ros:noetic-desktop-full
+    build:
+      context: .
+      dockerfile: ros-zenoh.Dockerfile
+    entrypoint: >
+      /bin/bash -c "
+      source /opt/ros/noetic/setup.bash &&
+      zenoh-bridge-ros1 -c /bridge_config.json5 &
+      /usr/bin/client-ros &&
+      wait
+      "
     networks:
       - robot-net
     volumes:
-      - ../.:/app:rw
-      - .././target/release/router:/usr/bin/subscriber:rw
+      - .././target/release/client-ros:/usr/bin/client-ros:rw
+      - ../client-ros/bridge_config.json5:/bridge_config.json5:ro
+  
+  rpc-client:
+    <<: *environment
+    environment:
+      RPC_SERVER_ADDR: "zenoh-router:7000"
+    profiles:
+      - run
+    image: ubuntu:22.04
+    entrypoint: > 
+      /bin/bash -c "
+      sleep 1 &&
+      /usr/bin/client
+      "
+    networks:
+      - robot-net
+    expose:
+      - 7000
+    volumes:
+      - .././target/release/client:/usr/bin/client:rw
+    depends_on:
+      zenoh-router:
+        condition: service_started
+    tty: true
+    stdin_open: true
 
   build:
     profiles:
@@ -43,7 +87,7 @@ services:
       - ../.:/app:rw
     entrypoint: /app/docker/entrypoint-dev.sh
     working_dir: /app
-    command: "cargo watch -x check -x clippy"
+    command: "cargo watch -x check -x clippy -x build"
 
 networks:
   robot-net:
