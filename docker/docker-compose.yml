@@ -18,6 +18,7 @@ services:
       - robot-net
     expose:
       - 7000
+      - 7447
     volumes:
       - .././target/release/router:/usr/bin/router:rw
 
@@ -37,6 +38,8 @@ services:
       "
     networks:
       - robot-net
+    expose:
+      - 7447
     volumes:
       - .././target/release/client-ros:/usr/bin/client-ros:rw
       - ../client-ros/bridge_config.json5:/bridge_config.json5:ro

@@ -12,11 +12,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     config
         .insert_json5("mode", &json!("client").to_string())
         .unwrap();
+    config
+        .insert_json5(
+            "connect/endpoints",
+            &json!(["tcp/0.0.0.0:7448"]).to_string(),
+        )
+        .unwrap();
 
     // Initialize Zenoh session
     let zenoh_session = zenoh::open(zenoh::config::Config::default())
         .await
         .expect("Failed to open Zenoh session");
+    println!("Session on ROS: {:?}", zenoh_session);
 
     try_init_log_from_env();
     // Create roslibrust client with Zenoh backend

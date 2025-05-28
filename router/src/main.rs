@@ -137,21 +137,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     config
         .insert_json5("mode", &json!("router").to_string())
         .unwrap();
-    // config
-    //     .insert_json5(
-    //         "listen/endpoints",
-    //         &json!(["tcp/127.0.0.1:7447"]).to_string(),
-    //     )
-    //     .unwrap();
-    // config
-    //     .insert_json5("scouting/multicast/enabled", &json!(true).to_string())
-    //     .unwrap();
-    // config
-    //     .insert_json5(
-    //         "scouting/multicast/address",
-    //         &json!("224.0.0.224:7446").to_string(),
-    //     )
-    //     .unwrap();
+    config
+        .insert_json5("listen/endpoints", &json!(["tcp/0.0.0.0:7447"]).to_string())
+        .unwrap();
 
     println!("Starting with zenoh config: {:?}", &config);
     let session = zenoh::open(config).await.unwrap();

@@ -38,7 +38,7 @@
       //// In order to use client bridging, you have two options:
       //// - globally select auto bridging mode (with caution!) with this option
       //// - bridge specific topics using 'client_topic_custom_bridging_mode' option (with a little bit less caution!)"#
-      // client_bridging_mode: "disabled",
+      // client_bridging_mode: "auto",
 
       ////
       //// subscriber_topic_custom_bridging_mode: A JSON Map describing custom bridging modes for particular topics.
@@ -154,9 +154,9 @@
   //// By configuring the endpoints, it is possible to tell zenoh which are the endpoints that other routers,
   //// peers, or client can use to establish a zenoh session.
   ////
-  // listen: {
-  //   endpoints: [
-  //     // "<proto>/<ip>:<port>"
-  //   ]
-  // },
+  listen: {
+    endpoints: [
+      "tcp/127.0.0.1:7448"
+    ]
+  },
 }
