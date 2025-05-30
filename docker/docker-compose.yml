@@ -22,28 +22,37 @@ services:
     volumes:
       - .././target/release/router:/usr/bin/router:rw
 
-  ros-noetic-subscriber:
+  zenoh-bridge:
     <<: *environment
     profiles:
       - run
-    build:
-      context: .
-      dockerfile: ros-zenoh.Dockerfile
-    entrypoint: >
-      /bin/bash -c "
-      source /opt/ros/noetic/setup.bash &&
-      zenoh-bridge-ros1 -c /bridge_config.json5 &
-      /usr/bin/client-ros &&
-      wait
-      "
+    image: eclipse/zenoh-bridge-ros2dds:latest
+    command: "-c bridge_config.json5"
     networks:
       - robot-net
     expose:
       - 7447
     volumes:
-      - .././target/release/client-ros:/usr/bin/client-ros:rw
       - ../client-ros/bridge_config.json5:/bridge_config.json5:ro
-  
+
+  turtle-sim:
+    environment:
+      DISPLAY: "192.168.0.2:0.0"
+      ROS_AUTOMATIC_DISCOVERY_RANGE: "LOCALHOST"
+      ROS_LOCALHOST_ONLY: 1
+    profiles:
+      - run
+    build:
+      dockerfile: ros-turtlesim.Dockerfile
+      context: .
+    command: bash -c "source /opt/ros/kilted/setup.bash && ros2 run turtlesim turtlesim_node"
+    networks:
+      - robot-net
+    expose:
+      - 7447
+    volumes:
+      - /tmp/.X11-unix/:/tmp/.X11-unix:rw
+
   rpc-client:
     <<: *environment
     environment:
