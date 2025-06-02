@@ -9,9 +9,9 @@ interface HelloService {
 }
 
 struct Vector3 {
-  x @0 :Float32;
-  y @1 :Float32;
-  z @2 :Float32;
+  x @0 :Float64;
+  y @1 :Float64;
+  z @2 :Float64;
 }
 
 struct Twist  {

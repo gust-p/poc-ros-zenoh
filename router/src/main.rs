@@ -1,8 +1,9 @@
 use capnp::capability::Promise;
 use capnp_rpc::pry;
 use capnp_rpc::{RpcSystem, rpc_twoparty_capnp, twoparty};
+use cdr::{CdrLe, Infinite};
 use futures::AsyncReadExt;
-use serde_json::json;
+use serde::{Deserialize, Serialize};
 use zenoh::{Config as ZenohConfig, try_init_log_from_env};
 
 pub mod schema_capnp {
@@ -17,6 +18,24 @@ struct ZenohService {
     zenoh_session: zenoh::Session,
 }
 
+#[derive(Deserialize, Serialize, PartialEq)]
+struct Hello {
+    data: String,
+}
+
+#[derive(Deserialize, Serialize, PartialEq)]
+struct Vector3 {
+    x: f64,
+    y: f64,
+    z: f64,
+}
+
+#[derive(Deserialize, Serialize, PartialEq)]
+struct Twist {
+    linear: Vector3,
+    angular: Vector3,
+}
+
 impl hello_service::Server for ZenohService {
     fn do_hello(
         &mut self,
@@ -24,16 +43,18 @@ impl hello_service::Server for ZenohService {
         _results: hello_service::DoHelloResults,
     ) -> capnp::capability::Promise<(), capnp::Error> {
         let data = pry!(pry!(params.get()).get_data());
+        dbg!("received: ", &data);
         let message = pry!(data.get_msg());
-
-        println!("Recv hello msg from client");
+        let hello = Hello {
+            data: message.to_string().unwrap(),
+        };
+        let encoded = cdr::serialize::<_, _, CdrLe>(&hello, Infinite).unwrap();
 
         let session = self.zenoh_session.clone();
-        let message_string = message.to_string().unwrap();
-        println!("Helloing message to zenoh: {}", &message_string);
+        println!("Sending message to zenoh");
 
         tokio::spawn(async move {
-            match session.put("rt/hello", message_string).await {
+            match session.put("rt/hello", encoded).await {
                 Ok(_) => println!("Hello sent to zenoh on /hello topic"),
                 Err(e) => {
                     eprintln!("Failed to publish hello to zenoh: {}", e)
@@ -52,11 +73,30 @@ impl twist_service::Server for ZenohService {
         _: twist_service::DoTwistResults,
     ) -> capnp::capability::Promise<(), capnp::Error> {
         let data = params.get().unwrap().get_data().unwrap();
+        dbg!("received: ", &data);
         let linear = data.get_linear().unwrap();
         let angular = data.get_angular().unwrap();
 
+        // Clone session before moving into async block
+        let session = self.zenoh_session.clone();
+
+        // Serialize twist
+        let twist_ser = Twist {
+            linear: Vector3 {
+                x: linear.get_x(),
+                y: linear.get_y(),
+                z: linear.get_z(),
+            },
+            angular: Vector3 {
+                x: angular.get_x(),
+                y: angular.get_y(),
+                z: angular.get_z(),
+            },
+        };
+        let encoded = cdr::serialize::<_, _, CdrLe>(&twist_ser, Infinite).unwrap();
+
         println!(
-            "Recv twist msg from client linear: x {} y {} z {} angular: x {} y {} z {}",
+            "Publishing twist message to zenoh: x {} y {} z {} angular: x {} y {} z {}",
             linear.get_x(),
             linear.get_y(),
             linear.get_z(),
@@ -65,28 +105,12 @@ impl twist_service::Server for ZenohService {
             angular.get_z()
         );
 
-        // Clone session before moving into async block
-        let session = self.zenoh_session.clone();
-
-        // Serialize twist data as JSON
-        let twist_json = json!({
-            "linear": {
-                "x": linear.get_x(),
-                "y": linear.get_y(),
-                "z": linear.get_z()
-            },
-            "angular": {
-                "x": angular.get_x(),
-                "y": angular.get_y(),
-                "z": angular.get_z()
-            }
-        });
-
-        println!("Publishing twist message to zenoh: {}", &twist_json);
-
         tokio::spawn(async move {
-            let publisher = session.declare_publisher("turtle1/cmd_vel").await.unwrap();
-            match publisher.put(twist_json.to_string()).await {
+            let publisher = session
+                .declare_publisher("rt/turtle1/cmd_vel")
+                .await
+                .unwrap();
+            match publisher.put(encoded).await {
                 Ok(_) => println!("Twist sent to zenoh on /rt/turtle1/cmd_vel topic"),
                 Err(e) => {
                     eprintln!("Failed to publish twist to zenoh: {}", e)
@@ -134,15 +158,14 @@ impl bootstrap::Server for BootstrapService {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut config = ZenohConfig::default();
-    config
-        .insert_json5("mode", &json!("router").to_string())
-        .unwrap();
-    config
-        .insert_json5("listen/endpoints", &json!(["tcp/0.0.0.0:7447"]).to_string())
-        .unwrap();
+    config.insert_json5("mode", r#""router""#).unwrap();
+    // config
+    // .insert_json5("listen/endpoints", &json!(["tcp/0.0.0.0:7447"]).to_string())
+    // .unwrap();
 
     println!("Starting with zenoh config: {:?}", &config);
     let session = zenoh::open(config).await.unwrap();
+    session.declare_publisher("rt/rosout").await.unwrap();
     println!("Session: {:?}", &session);
 
     try_init_log_from_env();

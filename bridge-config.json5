@@ -34,29 +34,7 @@
       //// ros_localhost_only: If set to true, the DDS discovery and traffic will occur only on the localhost interface (127.0.0.1).
       ////                     By default set to false, unless the "ROS_LOCALHOST_ONLY=1" environment variable is defined.
       ////
-      // ros_localhost_only: true,
-
-      ////
-      //// ros_automatic_discovery_range: controls how far ROS nodes will try to discover each other.
-      ////                                Valid options are:
-      ////                                * "SUBNET" is the default, and for DDS based middleware it means it will discover any node reachable via multicast.
-      ////                                * "LOCALHOST" means a node will only try to discover other nodes on the same machine.
-      ////                                * "OFF" means the node won’t discover any other nodes, even on the same machine.
-      ////                                * "SYSTEM_DEFAULT" means “don’t change any discovery settings”.
-      ////
-      ////                                Note that this is only available with ROS 2 Iron and later version
-      ////                                For more information: https://docs.ros.org/en/rolling/Tutorials/Advanced/Improved-Dynamic-Discovery.html
-      ////
-      // ros_automatic_discovery_range: "SUBNET",
-
-      ////
-      //// ros_static_peers: is a semicolon (;) separated list of addresses that ROS should try to discover nodes on.
-      ////                   This allows connecting to nodes on specific machines (as long as their discovery range is not set to OFF).
-      ////
-      ////                   Note that this is only available with ROS 2 Iron and later version
-      ////                   For more information: https://docs.ros.org/en/rolling/Tutorials/Advanced/Improved-Dynamic-Discovery.html
-      ////
-      // ros_static_peers: "192.168.1.1;192.168.1.2",
+      ros_localhost_only: true,
 
       ////
       //// shm_enabled: If set to true, the DDS implementation will use Iceoryx shared memory.
@@ -75,20 +53,8 @@
       ////               Use 'deny' to allow all except the specified interfaces. If an interface type is set to an empty list
       ////               or is not specified at all, it means that ALL such interface are allowed.
       // allow: {
-      //   publishers: [".*/laser_scan", "/tf", ".*/pose"],
-      //   subscribers: [".*/cmd_vel"],
-      //   service_servers: [".*/.*_parameters"],
-      //   service_clients: [],
-      //   action_servers: [".*/rotate_absolute"],
-      //   action_clients: [],
-      // },
-      // deny: {
-      //   publishers: ["/rosout", "/parameter_events"],
-      //   subscribers: ["/rosout"],
-      //   service_servers: [".*/set_parameters"],
-      //   service_clients: [".*/set_parameters"],
-      //   action_servers: [],
-      //   action_clients: [],
+      //   publishers: ["/turtle1/cmd_vel"],
+      //   subscribers: ["/turtle1/pose"],
       // },
 
       ////
@@ -125,10 +91,7 @@
 
       ////
       //// queries_timeout: Timeouts configuration for various Zenoh queries.
-      ////                  Each field is optional. If not set, the 'default' timeout (5.0 seconds by default) applies to all queries,
-      ////                  except for actions' get_result that is by default configured with a larget timeout (300.0 seconds)
-      ////                  to support actions that last a long time.
-      ////                  Refer to https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds/issues/369#issuecomment-2563725619
+      ////                  Each field is optional. If not set, the 'default' timeout (5.0 seconds by default) applies to all queries.
       ////                  Each value can be either a float in seconds that will apply as a timeout to all queries,
       ////                  either a list of strings with format "<regex>=<float>" where:
       ////                      - "regex" is a regular expression matching an interface name
@@ -145,18 +108,9 @@
       //   actions: {
       //     send_goal: 1.0,
       //     cancel_goal: 1.0,
-      //     get_result: [".*long_mission=3600", ".*short_action=10.0", ".*=300"],
+      //     get_result: [".*long_mission=3600", ".*short_action=10.0"],
       //   }
       // },
-
-      //// transient_local_cache_multiplier: A multiplier used to determine the size of the `PublicationCache` for a route serving a `TRANSIENT_LOCAL` Publisher.
-      ////                                   When a `TRANSIENT_LOCAL` Publisher is discovered, the plugin creates a route with a `PublicationCache` to store
-      ////                                   the publications for late joiner bridges that serve late joiner Subscribers.
-      ////                                   The cache size must be at least equal to the Publisher's `history_length` QoS setting.
-      ////                                   Since the plugin creates one route per topic, the route might serve multiple Publishers.
-      ////                                   Therefore, the `PublicationCache` size is calculated as `history_length * transient_local_cache_multiplier`.
-      ////                                   If there are more than 10 `TRANSIENT_LOCAL` Publishers on the same topic, consider increasing this multiplier.
-      // transient_local_cache_multiplier: 10,
 
       ////
       //// This plugin uses Tokio (https://tokio.rs/) for asynchronous programming. 
@@ -167,11 +121,11 @@
       //// When running as a standalone bridge the Zenoh Session's Runtime is used and can be configured via the
       //// `ZENOH_RUNTIME` environment variable. See https://docs.rs/zenoh-runtime/latest/zenoh_runtime/enum.ZRuntime.html
       ////
-
+      
       //// work_thread_num: The number of worker thread in the asynchronous runtime will use. (default: 2)
       ////                  Only for a plugin, no effect on a bridge.
       // work_thread_num: 2,
-
+      
       //// max_block_thread_num: The number of blocking thread in the asynchronous runtime will use. (default: 50)
       ////                       Only for a plugin, no effect on a bridge.
       // max_block_thread_num: 50,
@@ -204,7 +158,7 @@
   ////
   //// mode: The bridge's mode (router, peer or client)
   ////
-  //mode: "router",
+  mode: "client",
 
   ////
   //// Which endpoints to connect to. E.g. tcp/localhost:7447.
@@ -212,7 +166,7 @@
   ////
   connect: {
     endpoints: [
-      "tcp/zenoh-router:7447"
+      "tcp/localhost:7447"
     ]
   },
 
@@ -222,11 +176,11 @@
   //// peers, or client can use to establish a zenoh session.
   //// In 'router' mode (default) the zenoh-bridge-ros2dds is listening by default on `tcp/0.0.0.0:7447` (`0.0.0.0` meaning all the available network interfaces)
   ////
-  // listen: {
-  //  endpoints: [
-  //    // "<proto>/<ip>:<port>"
-  //  ]
-  //},
+  listen: {
+   endpoints: [
+     "tcp/0.0.0.0:7448"
+   ]
+  },
 
   ////
   //// Configure the scouting mechanisms and their behaviours
@@ -242,8 +196,8 @@
   //    interface: "auto", // If not set or set to "auto" the interface if picked automatically
   //    /// Which type of Zenoh instances to automatically establish sessions with upon discovery on UDP multicast.
   //    /// Accepts a single value or different values for router, peer and client.
-  //    /// Each value is an array containing values "peer", "router" and "client".
-  //    autoconnect: { router: [], peer: ["router","peer"] },
+  //    /// Each value is bit-or-like combinations of "peer", "router" and "client".
+  //    autoconnect: { router: "", peer: "router|peer" },
   //    /// Whether or not to listen for scout messages on UDP multicast and reply to them.
   //    listen: true,
   //  },
@@ -259,8 +213,9 @@
   //    multihop: false,
   //    /// Which type of Zenoh instances to automatically establish sessions with upon discovery on gossip.
   //    /// Accepts a single value or different values for router, peer and client.
-  //    /// Each value is an array containing values "peer", "router" and "client".
-  //    autoconnect: { router: [], peer: ["router","peer"] },
+  //    /// Each value is bit-or-like combinations of "peer", "router" and "client".
+  //    autoconnect: { router: "", peer: "router|peer" },
   //  },
   //},
+
 }
