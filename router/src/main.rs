@@ -1,4 +1,5 @@
 use capnp::capability::Promise;
+use capnp::serialize_packed;
 use capnp_rpc::pry;
 use capnp_rpc::{RpcSystem, rpc_twoparty_capnp, twoparty};
 use cdr::{CdrLe, Infinite};
@@ -11,6 +12,7 @@ pub mod schema_capnp {
 }
 
 use schema_capnp::bootstrap;
+use schema_capnp::hello;
 use schema_capnp::hello_service;
 use schema_capnp::twist_service;
 
@@ -49,23 +51,27 @@ impl hello_service::Server for HelloZenohService {
         params: hello_service::DoHelloParams,
         _results: hello_service::DoHelloResults,
     ) -> capnp::capability::Promise<(), capnp::Error> {
-        let data = pry!(pry!(params.get()).get_data());
-        dbg!("received: ", &data);
-        let message = pry!(data.get_msg());
-        let hello = Hello {
-            data: message.to_string().unwrap(),
-        };
-        let encoded = cdr::serialize::<_, _, CdrLe>(&hello, Infinite).unwrap();
+        // Alternative approach - get the data field and serialize it
+        let params_reader = pry!(params.get());
+        let data = pry!(params_reader.get_data());
+        dbg!("received", &data);
+
+        // Create a new message with just the data field
+        let mut message = capnp::message::Builder::new_default();
+        message.set_root(data.reborrow()).unwrap();
+
+        let mut buffer = Vec::new();
+        serialize_packed::write_message(&mut buffer, &message).unwrap();
 
         let session = self.session.clone();
         let topic = self.topic.clone();
-        println!("Sending message to zenoh");
 
         tokio::spawn(async move {
-            match session.put(&topic, encoded).await {
-                Ok(_) => println!("Hello sent to zenoh on {} topic", topic),
+            // Send the raw bytes directly to Zenoh
+            match session.put(&topic, buffer).await {
+                Ok(_) => println!("Raw Cap'n Proto data sent to zenoh on {} topic", topic),
                 Err(e) => {
-                    eprintln!("Failed to publish hello to zenoh: {}", e)
+                    eprintln!("Failed to publish raw data to zenoh: {}", e)
                 }
             }
         });
