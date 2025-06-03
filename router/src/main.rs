@@ -1,8 +1,10 @@
 use capnp::capability::Promise;
+use capnp::serialize_packed;
 use capnp_rpc::pry;
 use capnp_rpc::{RpcSystem, rpc_twoparty_capnp, twoparty};
+use cdr::{CdrLe, Infinite};
 use futures::AsyncReadExt;
-use serde_json::json;
+use serde::{Deserialize, Serialize};
 use zenoh::{Config as ZenohConfig, try_init_log_from_env};
 
 pub mod schema_capnp {
@@ -10,33 +12,66 @@ pub mod schema_capnp {
 }
 
 use schema_capnp::bootstrap;
+use schema_capnp::hello;
 use schema_capnp::hello_service;
 use schema_capnp::twist_service;
 
-struct ZenohService {
-    zenoh_session: zenoh::Session,
+// Separate service structs for different service types
+struct HelloZenohService {
+    session: zenoh::Session,
+    topic: String,
 }
 
-impl hello_service::Server for ZenohService {
+struct TwistZenohService {
+    session: zenoh::Session,
+    topic: String,
+}
+
+#[derive(Deserialize, Serialize, PartialEq)]
+struct Hello {
+    data: String,
+}
+
+#[derive(Deserialize, Serialize, PartialEq)]
+struct Vector3 {
+    x: f64,
+    y: f64,
+    z: f64,
+}
+
+#[derive(Deserialize, Serialize, PartialEq)]
+struct Twist {
+    linear: Vector3,
+    angular: Vector3,
+}
+
+impl hello_service::Server for HelloZenohService {
     fn do_hello(
         &mut self,
         params: hello_service::DoHelloParams,
         _results: hello_service::DoHelloResults,
     ) -> capnp::capability::Promise<(), capnp::Error> {
-        let data = pry!(pry!(params.get()).get_data());
-        let message = pry!(data.get_msg());
+        // Alternative approach - get the data field and serialize it
+        let params_reader = pry!(params.get());
+        let data = pry!(params_reader.get_data());
+        dbg!("received", &data);
 
-        println!("Recv hello msg from client");
+        // Create a new message with just the data field
+        let mut message = capnp::message::Builder::new_default();
+        message.set_root(data.reborrow()).unwrap();
 
-        let session = self.zenoh_session.clone();
-        let message_string = message.to_string().unwrap();
-        println!("Helloing message to zenoh: {}", &message_string);
+        let mut buffer = Vec::new();
+        serialize_packed::write_message(&mut buffer, &message).unwrap();
+
+        let session = self.session.clone();
+        let topic = self.topic.clone();
 
         tokio::spawn(async move {
-            match session.put("rt/hello", message_string).await {
-                Ok(_) => println!("Hello sent to zenoh on /hello topic"),
+            // Send the raw bytes directly to Zenoh
+            match session.put(&topic, buffer).await {
+                Ok(_) => println!("Raw Cap'n Proto data sent to zenoh on {} topic", topic),
                 Err(e) => {
-                    eprintln!("Failed to publish hello to zenoh: {}", e)
+                    eprintln!("Failed to publish raw data to zenoh: {}", e)
                 }
             }
         });
@@ -45,18 +80,34 @@ impl hello_service::Server for ZenohService {
     }
 }
 
-impl twist_service::Server for ZenohService {
+impl twist_service::Server for TwistZenohService {
     fn do_twist(
         &mut self,
         params: twist_service::DoTwistParams,
         _: twist_service::DoTwistResults,
     ) -> capnp::capability::Promise<(), capnp::Error> {
         let data = params.get().unwrap().get_data().unwrap();
+        dbg!("received: ", &data);
         let linear = data.get_linear().unwrap();
         let angular = data.get_angular().unwrap();
 
+        // Serialize twist
+        let twist_ser = Twist {
+            linear: Vector3 {
+                x: linear.get_x(),
+                y: linear.get_y(),
+                z: linear.get_z(),
+            },
+            angular: Vector3 {
+                x: angular.get_x(),
+                y: angular.get_y(),
+                z: angular.get_z(),
+            },
+        };
+        let encoded = cdr::serialize::<_, _, CdrLe>(&twist_ser, Infinite).unwrap();
+
         println!(
-            "Recv twist msg from client linear: x {} y {} z {} angular: x {} y {} z {}",
+            "Publishing twist message to zenoh: x {} y {} z {} angular: x {} y {} z {}",
             linear.get_x(),
             linear.get_y(),
             linear.get_z(),
@@ -65,29 +116,12 @@ impl twist_service::Server for ZenohService {
             angular.get_z()
         );
 
-        // Clone session before moving into async block
-        let session = self.zenoh_session.clone();
-
-        // Serialize twist data as JSON
-        let twist_json = json!({
-            "linear": {
-                "x": linear.get_x(),
-                "y": linear.get_y(),
-                "z": linear.get_z()
-            },
-            "angular": {
-                "x": angular.get_x(),
-                "y": angular.get_y(),
-                "z": angular.get_z()
-            }
-        });
-
-        println!("Publishing twist message to zenoh: {}", &twist_json);
-
+        let session = self.session.clone();
+        let topic = self.topic.clone();
         tokio::spawn(async move {
-            let publisher = session.declare_publisher("turtle1/cmd_vel").await.unwrap();
-            match publisher.put(twist_json.to_string()).await {
-                Ok(_) => println!("Twist sent to zenoh on /rt/turtle1/cmd_vel topic"),
+            let publisher = session.declare_publisher(&topic).await.unwrap();
+            match publisher.put(encoded).await {
+                Ok(_) => println!("Twist sent to zenoh on {} topic", topic),
                 Err(e) => {
                     eprintln!("Failed to publish twist to zenoh: {}", e)
                 }
@@ -98,9 +132,46 @@ impl twist_service::Server for ZenohService {
     }
 }
 
-// Bootstrap service that provides access to both services
-struct BootstrapService {
+// Builder for creating the bootstrap service with configured publishers
+pub struct BootstrapServiceBuilder {
     zenoh_session: zenoh::Session,
+    hello_topic: Option<String>,
+    twist_topic: Option<String>,
+}
+
+impl BootstrapServiceBuilder {
+    pub fn new(zenoh_session: zenoh::Session) -> Self {
+        Self {
+            zenoh_session,
+            hello_topic: None,
+            twist_topic: None,
+        }
+    }
+
+    pub fn with_hello_publisher(mut self, topic: impl Into<String>) -> Self {
+        self.hello_topic = Some(topic.into());
+        self
+    }
+
+    pub fn with_twist_publisher(mut self, topic: impl Into<String>) -> Self {
+        self.twist_topic = Some(topic.into());
+        self
+    }
+
+    pub async fn build(self) -> Result<BootstrapService, Box<dyn std::error::Error>> {
+        Ok(BootstrapService {
+            zenoh_session: self.zenoh_session,
+            hello_topic: self.hello_topic,
+            twist_topic: self.twist_topic,
+        })
+    }
+}
+
+// Bootstrap service that provides access to both services
+pub struct BootstrapService {
+    zenoh_session: zenoh::Session,
+    hello_topic: Option<String>,
+    twist_topic: Option<String>,
 }
 
 impl bootstrap::Server for BootstrapService {
@@ -109,12 +180,18 @@ impl bootstrap::Server for BootstrapService {
         _params: bootstrap::GetHelloServiceParams,
         mut results: bootstrap::GetHelloServiceResults,
     ) -> capnp::capability::Promise<(), capnp::Error> {
-        let hello_service = capnp_rpc::new_client(ZenohService {
-            zenoh_session: self.zenoh_session.clone(),
-        });
-
-        results.get().set_service(hello_service);
-        Promise::ok(())
+        if let Some(ref topic) = self.hello_topic {
+            let hello_service = capnp_rpc::new_client(HelloZenohService {
+                session: self.zenoh_session.clone(),
+                topic: topic.clone(),
+            });
+            results.get().set_service(hello_service);
+            Promise::ok(())
+        } else {
+            Promise::err(capnp::Error::failed(
+                "Hello publisher not configured".to_string(),
+            ))
+        }
     }
 
     fn get_twist_service(
@@ -122,39 +199,29 @@ impl bootstrap::Server for BootstrapService {
         _params: bootstrap::GetTwistServiceParams,
         mut results: bootstrap::GetTwistServiceResults,
     ) -> capnp::capability::Promise<(), capnp::Error> {
-        let twist_service = capnp_rpc::new_client(ZenohService {
-            zenoh_session: self.zenoh_session.clone(),
-        });
-
-        results.get().set_service(twist_service);
-        Promise::ok(())
+        if let Some(ref topic) = self.twist_topic {
+            let twist_service = capnp_rpc::new_client(TwistZenohService {
+                session: self.zenoh_session.clone(),
+                topic: topic.clone(),
+            });
+            results.get().set_service(twist_service);
+            Promise::ok(())
+        } else {
+            Promise::err(capnp::Error::failed(
+                "Twist publisher not configured".to_string(),
+            ))
+        }
     }
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut config = ZenohConfig::default();
-    config
-        .insert_json5("mode", &json!("router").to_string())
-        .unwrap();
-    // config
-    //     .insert_json5(
-    //         "listen/endpoints",
-    //         &json!(["tcp/127.0.0.1:7447"]).to_string(),
-    //     )
-    //     .unwrap();
-    // config
-    //     .insert_json5("scouting/multicast/enabled", &json!(true).to_string())
-    //     .unwrap();
-    // config
-    //     .insert_json5(
-    //         "scouting/multicast/address",
-    //         &json!("224.0.0.224:7446").to_string(),
-    //     )
-    //     .unwrap();
+    config.insert_json5("mode", r#""router""#).unwrap();
 
     println!("Starting with zenoh config: {:?}", &config);
     let session = zenoh::open(config).await.unwrap();
+    session.declare_publisher("rt/rosout").await.unwrap();
     println!("Session: {:?}", &session);
 
     try_init_log_from_env();
@@ -166,11 +233,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let listener = tokio::net::TcpListener::bind(&addr).await?;
             println!("Listening on {}", &addr);
 
-            // Create bootstrap service that provides access to both services
+            // Create bootstrap service using builder pattern
+            let bootstrap_service = BootstrapServiceBuilder::new(session.clone())
+                .with_hello_publisher("fleet/hello")
+                .with_twist_publisher("turtle1/cmd_vel")
+                .build()
+                .await?;
+
             let bootstrap_client: schema_capnp::bootstrap::Client =
-                capnp_rpc::new_client(BootstrapService {
-                    zenoh_session: session.clone(),
-                });
+                capnp_rpc::new_client(bootstrap_service);
 
             println!("Cap n' Proto bootstrap client created");
             loop {

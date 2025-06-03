@@ -267,18 +267,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "cargo-emit"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1582e1c9e755dd6ad6b224dcffb135d199399a4568d454bd89fe515ca8425695"
-
-[[package]]
 name = "cc"
 version = "1.2.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5f4ac86a9e5bc1e2b3449ab9d7d3a6a405e3d1bb28d7b9be8614f55846ae3766"
 dependencies = [
  "shlex",
+]
+
+[[package]]
+name = "cdr"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9617422bf43fde9280707a7e90f8f7494389c182f5c70b0f67592d0f06d41dfa"
+dependencies = [
+ "byteorder",
+ "serde",
 ]
 
 [[package]]
@@ -335,18 +339,6 @@ dependencies = [
  "termion",
  "tokio",
  "tokio-util",
- "zenoh",
-]
-
-[[package]]
-name = "client-ros"
-version = "0.1.0"
-dependencies = [
- "cargo-emit",
- "roslibrust",
- "serde",
- "serde_json",
- "tokio",
  "zenoh",
 ]
 
@@ -629,16 +621,6 @@ name = "equivalent"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
-
-[[package]]
-name = "error-chain"
-version = "0.12.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d2f06b9cac1506ece98fe3231e3cc9c4410ec3d5b1f24ae1c8946f0742cdefc"
-dependencies = [
- "backtrace",
- "version_check",
-]
 
 [[package]]
 name = "event-listener"
@@ -1262,12 +1244,6 @@ checksum = "8263075bb86c5a1b1427b5ae862e8889656f126e9f77c484496e8b47cf5c5558"
 dependencies = [
  "regex-automata 0.1.10",
 ]
-
-[[package]]
-name = "md5"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "490cc448043f947bae3cbee9c203358d62dbee0db12107a74be5c30ccfd09771"
 
 [[package]]
 name = "memchr"
@@ -1990,88 +1966,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "roslibrust"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88cf50f52898a9333d11b2abff969cbc5165ebdcfe7c4dfbf00424174ff1a050"
-dependencies = [
- "roslibrust_codegen",
- "roslibrust_common",
- "roslibrust_zenoh",
-]
-
-[[package]]
-name = "roslibrust_codegen"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0789feda0ea922abcb2333ff48e07dcd09c40fbe35d5b285d1391f50baa1ac36"
-dependencies = [
- "lazy_static",
- "log",
- "md5",
- "proc-macro2",
- "quote",
- "roslibrust_common",
- "serde",
- "serde-big-array",
- "serde_bytes",
- "serde_json",
- "simple-error",
- "smart-default",
- "syn 1.0.109",
- "tokio",
- "walkdir",
- "xml-rs",
-]
-
-[[package]]
-name = "roslibrust_common"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f27ed5b6d9c491b37b0a409dbea0c6d276db201ae7af13c5d072777baaa114cc"
-dependencies = [
- "anyhow",
- "futures",
- "md5",
- "serde",
- "thiserror 2.0.12",
-]
-
-[[package]]
-name = "roslibrust_serde_rosmsg"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ce8ff385202b488c2cb350e7fe6601264c78e63f28fb0b3488dee822a1d8616"
-dependencies = [
- "byteorder",
- "error-chain",
- "serde",
-]
-
-[[package]]
-name = "roslibrust_zenoh"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51cd7510c6e68e03da6d8c7e65fb7572aca39ee30073126a98bf66d2769e7df1"
-dependencies = [
- "anyhow",
- "hex",
- "log",
- "roslibrust_common",
- "roslibrust_serde_rosmsg",
- "tokio",
- "zenoh",
-]
-
-[[package]]
 name = "router"
 version = "0.1.0"
 dependencies = [
  "capnp",
  "capnp-rpc",
  "capnpc",
+ "cdr",
  "futures",
- "serde_json",
+ "serde",
  "tokio",
  "tokio-util",
  "zenoh",
@@ -2341,24 +2244,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde-big-array"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11fc7cc2c76d73e0f27ee52abbd64eec84d46f370c88371120433196934e4b7f"
-dependencies = [
- "serde",
-]
-
-[[package]]
-name = "serde_bytes"
-version = "0.11.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8437fd221bde2d4ca316d61b90e337e9e702b3820b87d63caa9ba6c02bd06d96"
-dependencies = [
- "serde",
-]
-
-[[package]]
 name = "serde_derive"
 version = "1.0.219"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2511,12 +2396,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "simple-error"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e2accd2c41a0e920d2abd91b2badcfa1da784662f54fbc47e0e3a51f1e2e1cf"
-
-[[package]]
 name = "siphasher"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2536,17 +2415,6 @@ name = "smallvec"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8917285742e9f3e1683f0a9c4e6b57960b7314d0b08d30d1ecd426713ee2eee9"
-
-[[package]]
-name = "smart-default"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0eb01866308440fc64d6c44d9e86c5cc17adfe33c4d6eed55da9145044d0ffc1"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.101",
-]
 
 [[package]]
 name = "socket2"
@@ -3557,12 +3425,6 @@ dependencies = [
  "thiserror 1.0.69",
  "time",
 ]
-
-[[package]]
-name = "xml-rs"
-version = "0.8.26"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a62ce76d9b56901b19a74f19431b0d8b3bc7ca4ad685a746dfd78ca8f4fc6bda"
 
 [[package]]
 name = "yoke"

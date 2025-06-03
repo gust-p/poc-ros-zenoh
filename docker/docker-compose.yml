@@ -2,7 +2,7 @@ name: poc-ros-zenoh
 
 x-environment: &environment
     environment:
-      RUST_LOG: ${RUST_LOG}
+      RUST_LOG: ${RUST_LOG:-trace}
 
 services:
   zenoh-router:
@@ -14,37 +14,48 @@ services:
       /bin/bash -c "
       /usr/bin/router
       "
-    networks:
-      - robot-net
-    expose:
-      - 7000
+    network_mode: host
     volumes:
       - .././target/release/router:/usr/bin/router:rw
 
-  ros-noetic-subscriber:
+  zenoh-bridge:
     <<: *environment
     profiles:
       - run
-    build:
-      context: .
-      dockerfile: ros-zenoh.Dockerfile
-    entrypoint: >
-      /bin/bash -c "
-      source /opt/ros/noetic/setup.bash &&
-      zenoh-bridge-ros1 -c /bridge_config.json5 &
-      /usr/bin/client-ros &&
-      wait
-      "
-    networks:
-      - robot-net
+    image: eclipse/zenoh-bridge-ros2dds:latest
+    command: "-c bridge-config.json5"
+    network_mode: host
     volumes:
-      - .././target/release/client-ros:/usr/bin/client-ros:rw
-      - ../client-ros/bridge_config.json5:/bridge_config.json5:ro
-  
+      - ../bridge-config.json5:/bridge-config.json5:ro
+    depends_on:
+      zenoh-router:
+        condition: service_started
+
+  turtle-sim:
+    <<: *environment
+    environment:
+      DISPLAY: "192.168.0.2:0.0"
+      RMW_IMPLEMENTATION: rmw_cyclonedds_cpp
+    profiles:
+      - run
+    build:
+      dockerfile: ros-turtlesim.Dockerfile
+      context: .
+    command: bash -c "source /opt/ros/rolling/setup.bash && ros2 run turtlesim turtlesim_node"
+    network_mode: host
+    volumes:
+      - ../bridge-config.json5:/bridge-config.json5:ro
+      - /tmp/.X11-unix/:/tmp/.X11-unix:rw
+    depends_on:
+      zenoh-router:
+        condition: service_started
+      zenoh-bridge:
+        condition: service_started
+
   rpc-client:
     <<: *environment
     environment:
-      RPC_SERVER_ADDR: "zenoh-router:7000"
+      RPC_SERVER_ADDR: "localhost:7000"
     profiles:
       - run
     image: ubuntu:22.04
@@ -53,8 +64,7 @@ services:
       sleep 1 &&
       /usr/bin/client
       "
-    networks:
-      - robot-net
+    network_mode: host
     expose:
       - 7000
     volumes:
@@ -89,5 +99,3 @@ services:
     working_dir: /app
     command: "cargo watch -x check -x clippy -x build"
 
-networks:
-  robot-net:

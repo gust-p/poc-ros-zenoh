@@ -745,22 +745,22 @@ pub mod vector3 {
       self.reader.total_size()
     }
     #[inline]
-    pub fn get_x(self) -> f32 {
-      self.reader.get_data_field::<f32>(0)
+    pub fn get_x(self) -> f64 {
+      self.reader.get_data_field::<f64>(0)
     }
     #[inline]
-    pub fn get_y(self) -> f32 {
-      self.reader.get_data_field::<f32>(1)
+    pub fn get_y(self) -> f64 {
+      self.reader.get_data_field::<f64>(1)
     }
     #[inline]
-    pub fn get_z(self) -> f32 {
-      self.reader.get_data_field::<f32>(2)
+    pub fn get_z(self) -> f64 {
+      self.reader.get_data_field::<f64>(2)
     }
   }
 
   pub struct Builder<'a> { builder: ::capnp::private::layout::StructBuilder<'a> }
   impl <> ::capnp::traits::HasStructSize for Builder<'_,>  {
-    const STRUCT_SIZE: ::capnp::private::layout::StructSize = ::capnp::private::layout::StructSize { data: 2, pointers: 0 };
+    const STRUCT_SIZE: ::capnp::private::layout::StructSize = ::capnp::private::layout::StructSize { data: 3, pointers: 0 };
   }
   impl <> ::capnp::traits::HasTypeId for Builder<'_,>  {
     const TYPE_ID: u64 = _private::TYPE_ID;
@@ -811,28 +811,28 @@ pub mod vector3 {
       self.builder.as_reader().total_size()
     }
     #[inline]
-    pub fn get_x(self) -> f32 {
-      self.builder.get_data_field::<f32>(0)
+    pub fn get_x(self) -> f64 {
+      self.builder.get_data_field::<f64>(0)
     }
     #[inline]
-    pub fn set_x(&mut self, value: f32)  {
-      self.builder.set_data_field::<f32>(0, value);
+    pub fn set_x(&mut self, value: f64)  {
+      self.builder.set_data_field::<f64>(0, value);
     }
     #[inline]
-    pub fn get_y(self) -> f32 {
-      self.builder.get_data_field::<f32>(1)
+    pub fn get_y(self) -> f64 {
+      self.builder.get_data_field::<f64>(1)
     }
     #[inline]
-    pub fn set_y(&mut self, value: f32)  {
-      self.builder.set_data_field::<f32>(1, value);
+    pub fn set_y(&mut self, value: f64)  {
+      self.builder.set_data_field::<f64>(1, value);
     }
     #[inline]
-    pub fn get_z(self) -> f32 {
-      self.builder.get_data_field::<f32>(2)
+    pub fn get_z(self) -> f64 {
+      self.builder.get_data_field::<f64>(2)
     }
     #[inline]
-    pub fn set_z(&mut self, value: f32)  {
-      self.builder.set_data_field::<f32>(2, value);
+    pub fn set_z(&mut self, value: f64)  {
+      self.builder.set_data_field::<f64>(2, value);
     }
   }
 
@@ -848,7 +848,7 @@ pub mod vector3 {
     pub static ENCODED_NODE: [::capnp::Word; 62] = [
       ::capnp::word(0, 0, 0, 0, 5, 0, 6, 0),
       ::capnp::word(110, 75, 15, 207, 224, 115, 243, 185),
-      ::capnp::word(13, 0, 0, 0, 1, 0, 2, 0),
+      ::capnp::word(13, 0, 0, 0, 1, 0, 3, 0),
       ::capnp::word(98, 245, 103, 161, 130, 8, 73, 240),
       ::capnp::word(0, 0, 7, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
@@ -885,35 +885,35 @@ pub mod vector3 {
       ::capnp::word(72, 0, 0, 0, 3, 0, 1, 0),
       ::capnp::word(84, 0, 0, 0, 2, 0, 1, 0),
       ::capnp::word(120, 0, 0, 0, 0, 0, 0, 0),
-      ::capnp::word(10, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(11, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
-      ::capnp::word(10, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(11, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(121, 0, 0, 0, 0, 0, 0, 0),
-      ::capnp::word(10, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(11, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
-      ::capnp::word(10, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(11, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(122, 0, 0, 0, 0, 0, 0, 0),
-      ::capnp::word(10, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(11, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
-      ::capnp::word(10, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(11, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
     ];
     pub fn get_field_types(index: u16) -> ::capnp::introspect::Type {
       match index {
-        0 => <f32 as ::capnp::introspect::Introspect>::introspect(),
-        1 => <f32 as ::capnp::introspect::Introspect>::introspect(),
-        2 => <f32 as ::capnp::introspect::Introspect>::introspect(),
+        0 => <f64 as ::capnp::introspect::Introspect>::introspect(),
+        1 => <f64 as ::capnp::introspect::Introspect>::introspect(),
+        2 => <f64 as ::capnp::introspect::Introspect>::introspect(),
         _ => panic!("invalid field index {}", index),
       }
     }
